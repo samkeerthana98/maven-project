@@ -1,23 +1,23 @@
-pipeline
-{
-agent {
-    label 'DevServer'
-}
-tools {
-  maven 'mymaven'
-}
+pipeline {
+    agent {
+        label 'DevServer'
+    }
 
-stages {
-    stage('build')
-    {
-        steps {
-            sh 'mvn clean package'
+    tools {
+        maven 'mymaven'
+    }
+
+    stages {
+        stage('Build') {
+            steps {
+                sh 'mvn clean package'
+            }
         }
     }
+
     post {
         success {
             archiveArtifacts artifacts: '**/target/*.war'
         }
     }
-}
 }
