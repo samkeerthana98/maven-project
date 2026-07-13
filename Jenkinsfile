@@ -22,7 +22,22 @@ pipeline {
             }
         }
     }
-
+    stage('test')
+    {
+        parallel {
+            stage('testA') {
+                steps {
+                    echo 'This is testA'
+                }
+            }
+            stage('testB') {
+                steps {
+                    echo 'This is testB'
+                }
+                
+            }
+        }
+    }
     post {
         success {
             archiveArtifacts artifacts: '**/target/*.war'
