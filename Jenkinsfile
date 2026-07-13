@@ -70,13 +70,13 @@ pipeline {
             }
 
             steps {
-                dir('/var/www/html') {
-                    unstash 'maven-build'
-                }
+                // Restore artifact into the Jenkins workspace
+                unstash 'maven-build'
 
                 sh '''
+                    sudo cp webapp/target/*.war /var/www/html/
                     cd /var/www/html
-                    jar -xvf webapp.war
+                    sudo jar -xvf *.war
                 '''
             }
         }
