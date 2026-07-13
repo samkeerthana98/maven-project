@@ -72,11 +72,27 @@ pipeline {
             steps {
                 // Restore artifact into the Jenkins workspace
                 unstash 'maven-build'
-
                 sh '''
-                    sudo cp webapp/target/*.war /var/www/html/
+                    echo "Current Workspace:"
+                    pwd
+
+                    echo "Searching for WAR file..."
+                    find . -name "*.war"
+
+                    WAR=$(find . -name "*.war" | head -1)
+
+                    if [ -z "$WAR" ]; then
+                        echo "ERROR: No WAR file found!"
+                        exit 1
+                    fi
+
+                    echo "WAR file found: $WAR"
+
+                    sudo cp "$WAR" /var/www/html/
+
                     cd /var/www/html
-                    sudo jar -xvf *.war
+
+                    sudo jar -xvf "$(basename "$WAR")"
                 '''
             }
         }
