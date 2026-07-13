@@ -4,7 +4,11 @@ pipeline {
     }
 
     parameters {
-        string(name: 'LASTNAME', defaultValue: 'Amara')
+        choice(
+            name: 'select_environment',
+            choices: ['dev', 'prod'],
+            description: 'Select deployment environment'
+        )
     }
 
     environment {
@@ -19,8 +23,7 @@ pipeline {
 
         stage('Build') {
             steps {
-                sh 'mvn clean package'
-                echo "Hello $NAME ${params.LASTNAME}"
+                sh 'mvn clean package -DskipTests=true'
             }
         }
 
@@ -28,23 +31,59 @@ pipeline {
             parallel {
 
                 stage('TestA') {
+                    agent {
+                        label 'DevServer'
+                    }
                     steps {
                         echo 'This is testA'
+                        sh 'mvn test'
                     }
                 }
 
                 stage('TestB') {
+                    agent {
+                        label 'DevServer'
+                    }
                     steps {
                         echo 'This is testB'
+                        sh 'mvn test'
                     }
                 }
+
             }
         }
+
+        stage('Deploy Dev') {
+            when {
+                beforeAgent true
+                expression {
+                    params.select_environment == 'dev'
+                }
+            }
+
+            agent {
+                label 'DevServer'
+            }
+
+            steps {
+                dir('/var/www/html') {
+                    unstash 'maven-build'
+                }
+
+                sh '''
+                    cd /var/www/html
+                    jar -xvf webapp.war
+                '''
+            }
+        }
+
     }
 
     post {
         success {
-            archiveArtifacts artifacts: '**/target/*.war'
+            dir('webapp/target') {
+                stash name: 'maven-build', includes: '*.war'
+            }
         }
     }
 }
