@@ -35,7 +35,7 @@ pipeline {
                     file.hello()
                 }
 
-                sh 'sh 'mvn clean package -DskipTests=true''
+                sh 'mvn clean package -DskipTests=true'
 
             }
 
