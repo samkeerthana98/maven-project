@@ -1,0 +1,196 @@
+pipeline {
+
+    agent {
+        label 'DevServer'
+    }
+
+    parameters {
+        choice(
+            name: 'select_environment',
+            choices: ['dev', 'prod'],
+            description: 'Select deployment environment'
+        )
+    }
+
+    environment {
+
+        IMAGE_NAME = "samkeerthana/maven-project"
+        IMAGE_TAG = "${BUILD_NUMBER}"
+
+        DOCKER_CREDS = credentials('dockerhub-credentials')
+    }
+
+    tools {
+        maven 'mymaven'
+    }
+
+    stages {
+
+        stage('Build') {
+
+            steps {
+
+                script {
+                    file = load "script.groovy"
+                    file.hello()
+                }
+
+                sh 'sh 'mvn clean package -DskipTests=true''
+
+            }
+
+        }
+
+        stage('Test') {
+
+            parallel {
+
+                stage('TestA') {
+                    steps {
+                        sh 'linux test'
+                    }
+                }
+
+                stage('TestB') {
+                    steps {
+                        sh 'integration test'
+                    }
+                }
+
+            }
+
+        }
+
+        stage('Docker Build') {
+
+            steps {
+
+                sh '''
+                    docker build \
+                    -t ${IMAGE_NAME}:${IMAGE_TAG} \
+                    -t ${IMAGE_NAME}:latest .
+                '''
+
+            }
+
+        }
+
+        stage('Docker Login') {
+
+            steps {
+
+                sh '''
+                    echo "$DOCKER_CREDS_PSW" | docker login \
+                    -u "$DOCKER_CREDS_USR" \
+                    --password-stdin
+                '''
+
+            }
+
+        }
+
+        stage('Docker Push') {
+
+            steps {
+
+                sh '''
+                    docker push ${IMAGE_NAME}:${IMAGE_TAG}
+                    docker push ${IMAGE_NAME}:latest
+                '''
+
+            }
+
+        }
+
+        stage('Deploy Dev') {
+
+            when {
+                beforeAgent true
+                expression {
+                    params.select_environment == 'dev'
+                }
+            }
+
+            agent {
+                label 'DevServer'
+            }
+
+            steps {
+
+                sh '''
+                    docker pull ${IMAGE_NAME}:${IMAGE_TAG}
+                    docker stop maven-project || true
+
+                    docker rm maven-project || true
+                    
+                    docker run -d \
+                        --name maven-project \
+                        -p 8080:8080 \
+                        ${IMAGE_NAME}:${IMAGE_TAG}
+                '''
+
+            }
+
+        }
+
+        stage('Deploy Prod') {
+
+            when {
+                beforeAgent true
+                expression {
+                    params.select_environment == 'prod'
+                }
+            }
+
+            agent {
+                label 'ProdServer'
+            }
+
+            steps {
+
+                sh '''
+                    echo "$DOCKER_CREDS_PSW" | docker login \
+                    -u "$DOCKER_CREDS_USR" \
+                    --password-stdin
+
+                    docker pull ${IMAGE_NAME}:${IMAGE_TAG}
+
+                    docker stop maven-project || true
+
+                    docker rm maven-project || true
+
+                    docker run -d \
+                        --name maven-project \
+                        -p 8080:8080 \
+                        ${IMAGE_NAME}:${IMAGE_TAG}
+                '''
+
+            }
+
+        }
+
+    }
+
+    post {
+
+        always {
+
+            sh 'docker logout || true'
+
+        }
+
+        success {
+
+            echo "Docker Pipeline Completed Successfully"
+
+        }
+
+        failure {
+
+            echo "Docker Pipeline Failed"
+
+        }
+
+    }
+
+}
