@@ -15,7 +15,7 @@ pipeline {
     environment {
 
         IMAGE_NAME = "samkeerthana/maven-project"
-        IMAGE_TAG = "${BUILD_NUMBER}"
+        IMAGE_TAG = "latest"
 
         DOCKER_CREDS = credentials('dockerhub-credentials')
     }
