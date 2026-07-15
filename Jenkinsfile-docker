@@ -47,13 +47,13 @@ pipeline {
 
                 stage('TestA') {
                     steps {
-                        sh 'echo linux test succesful'
+                        sh 'echo "Linux test successful"'
                     }
                 }
 
                 stage('TestB') {
                     steps {
-                        sh 'echo integration test succesful'
+                        sh 'echo "integration test successful"'
                     }
                 }
 
