@@ -147,6 +147,12 @@ pipeline {
             }
 
             steps {
+                timeout(time: 5, unit: 'DAYS') {
+                    input(
+                        message: 'Approve Production Deployment?',
+                        ok: 'Deploy'
+                    )
+                }
 
                 sh '''
                     echo "$DOCKER_CREDS_PSW" | docker login \
